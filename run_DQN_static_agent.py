@@ -1,7 +1,7 @@
 from evaluation_functions_static import evaluate_error_rates, evaluate_fixed_errors
 from plot_functions import plot_benchmark_MWPM
 import numpy as np
-from PPO_static_agent import PPO_agent
+from DQN_static_agent import DQN_agent
 
 
 
@@ -18,14 +18,16 @@ mask_actions=True # if set to True action masking is enabled, the illegal action
 
 board_size=5 # board of size dxd plaquettes and stars
 error_rate=0.1 # bit-flip error rate each qubit on the board is subject to
-ent_coef=0.01 # entropy coefficient of the model
-clip_range=0.1 # clipping parameter of the model
+exp_frac = 0.1 # exploration parameter increment
+exp_init = 1.0 # begin value of the exploration parameter
+exp_fin = 0.05 # end value of the exploration parameter
+buffer_size = 1000000 # size of the replay buffer
 N=1 # the number of fixed initinal flips N the agent model is trained on or loaded when 'fixed' is set to True
 logical_error_reward=5 # the reward the agent gets when it has removed all syndrome points, but the terminal board state claims that there is a logical error.
 success_reward=10 # the reward the agent gets when it has removed all syndrome points, and the terminal board state claims that there is no logical error, ans therefore the agent has successfully done its job.
 continue_reward=-1 # the reward the agent gets for each action that does not result in the terminal board state. If negative it gets penalized for each move it does, therefore giving the agent an incentive to remove syndromes in as less moves as possible.
 illegal_action_reward=-2 # the reward the agent gets when 'mask_actions' is set to False and therefore the agent gets penalized by choosing an illegal action.
-total_timesteps=1000 # total amount of times the env.step() is called during training. Note this is not equal to number of training episodes!
+total_timesteps=1000000 # total amount of times the env.step() is called during training. Note this is not equal to number of training episodes!
 learning_rate= 0.001 # learning rate during training
 
 training_N=[N] # values of N initial flips the agent model is trained on
@@ -37,13 +39,15 @@ check_fails=False # if True, during evaluation all cases in which the agent fail
 render=False # if True, the environment with the agent's actions will be rendered per timestep.
 save_files=True # if True results will be saved. Please specify the storing folder in the file 'evaluation_functions_PPO_static.py'
 number_evaluations=100 # the number of evaluations the agent will be evaluated on
-max_moves=200 # the maximum amount of moves the agent is allowed to make per evaluation episode
+max_moves=50 # the maximum amount of moves the agent is allowed to make per evaluation episode
 N_evaluates = [1,2,3,4,5] # the number of fixed initial flips N the agent is evaluated on if 'evaluate_fixed' is set to True.
 error_rates_eval=list(np.linspace(0.01,0.15,10)) # the error rates the agent is evaluated on if 'evaluate_fixed' is set to False.
 
 
 
-# SET SETTINGS TO INITIALISE AGENT ON
+
+
+#SET SETTINGS TO INITIALISE AGENT ON
 initialisation_settings = {'board_size': board_size,
             'error_rate': error_rate,
             'l_reward': logical_error_reward,
@@ -53,15 +57,17 @@ initialisation_settings = {'board_size': board_size,
             'lr':learning_rate,
             'total_timesteps': total_timesteps,
             'mask_actions': mask_actions,
-            'correlated':correlated,
             'fixed':fixed,
             'N':N,
-            'ent_coef':ent_coef,
-            'clip_range':clip_range,
+            'correlated':correlated,
+            'exp_frac':exp_frac,
+            'exp_init':exp_init,
+            'exp_fin':exp_fin,
+            'buff':buffer_size,
             'max_moves':max_moves
             }
 
-# SET SETTINGS TO LOAD TRAINED AGENT ON
+#SET SETTINGS TO LOAD TRAINED AGENT ON
 loaded_model_settings = {'board_size': board_size,
             'error_rate': error_rate,
             'l_reward': logical_error_reward,
@@ -71,15 +77,16 @@ loaded_model_settings = {'board_size': board_size,
             'lr':learning_rate,
             'total_timesteps': total_timesteps,
             'mask_actions': mask_actions,
-            'correlated':correlated,
             'fixed':fixed,
             'N':N,
-            'ent_coef':ent_coef,
-            'clip_range':clip_range,
+            'correlated':correlated,
+            'exp_frac':exp_frac,
+            'exp_init':exp_init,
+            'exp_fin':exp_fin,
+            'buff':buffer_size,
             'max_moves':max_moves
             }
 
-# SET SETTINGS TO EVALUATE AGENT ON
 evaluation_settings = {'board_size': board_size,
             'error_rate': error_rate,
             'l_reward': logical_error_reward,
@@ -89,14 +96,15 @@ evaluation_settings = {'board_size': board_size,
             'lr':learning_rate,
             'total_timesteps': total_timesteps,
             'mask_actions': mask_actions,
-            'correlated':correlated,
             'fixed':fixed,
             'N':N,
-            'ent_coef':ent_coef,
-            'clip_range':clip_range,
+            'correlated':correlated,
+            'exp_frac':exp_frac,
+            'exp_init':exp_init,
+            'exp_fin':exp_fin,
+            'buff':buffer_size,
             'max_moves':max_moves
             }
-
 
 
 
@@ -128,15 +136,15 @@ for training_value in training_values:
 
 
 
-    # initialise PPO Agent
-    AgentPPO = PPO_agent(initialisation_settings, log)
+    #initialise DQN Agent
+    AgentDQN = DQN_agent(initialisation_settings, log)
 
     if train:
-        AgentPPO.train_model(save_model_path=save_model_path)
+        AgentDQN.train_model(save_model_path=save_model_path)
     else:
         print(f"{loaded_model_settings['N']=}")
         print(f"{loaded_model_settings['error_rate']=}")
-        AgentPPO.load_model(load_model_path=load_model_path)
+        AgentDQN.load_model(load_model_path=load_model_path)
         
 
     if curriculum:
@@ -154,9 +162,9 @@ for training_value in training_values:
         for key, value in initialisation_settings.items():
             save_model_path+=f"{key}={value}"
 
-        AgentPPO.change_environment_settings(initialisation_settings)
+        AgentDQN.change_environment_settings(initialisation_settings)
 
-        AgentPPO.train_model(save_model_path=save_model_path)
+        AgentDQN.train_model(save_model_path=save_model_path)
         
         if fixed:
             loaded_model_settings['N']=training_value
@@ -168,9 +176,9 @@ for training_value in training_values:
     if evaluate:
 
         if evaluate_fixed:
-            success_rates, success_rates_MWPM = evaluate_fixed_errors(AgentPPO,evaluate_fixed, fixed, evaluation_settings, loaded_model_settings,N_evaluates, render, number_evaluations, max_moves, check_fails, save_files)
+            success_rates, success_rates_MWPM,observations, results, actions = evaluate_fixed_errors(AgentDQN,evaluation_settings, N_evaluates, render, number_evaluations, max_moves, check_fails, save_files)
         else:
-            success_rates, success_rates_MWPM = evaluate_error_rates(AgentPPO, evaluate_fixed, fixed, evaluation_settings, loaded_model_settings,error_rates_eval, render, number_evaluations, max_moves, check_fails, save_files)
+            success_rates, success_rates_MWPM,observations, results, actions = evaluate_error_rates(AgentDQN,evaluation_settings, error_rates_eval, render, number_evaluations, max_moves, check_fails, save_files, fixed)
 
 
         success_rates_all.append(success_rates)
@@ -188,10 +196,12 @@ success_rates_all=np.array(success_rates_all)
 success_rates_all_MWPM=np.array(success_rates_all_MWPM)
 
 
+
+
 if fixed:
-    path_plot = f"/Users/lindsayspoor/Library/Mobile Documents/com~apple~CloudDocs/Documents/Studiedocumenten/2023-2024/MSc Research Project/Results/Figure_results/Results_benchmarks/PPO_vs_MWPM_{evaluation_path}_{loaded_model_settings['N']}.pdf"
+    path_plot = f"/Users/lindsayspoor/Library/Mobile Documents/com~apple~CloudDocs/Documents/Studiedocumenten/2023-2024/MSc Research Project/Results/Figure_results/Results_benchmarks/DQN_vs_MWPM_{evaluation_path}_{loaded_model_settings['N']}.pdf"
 else:
-    path_plot = f"/Users/lindsayspoor/Library/Mobile Documents/com~apple~CloudDocs/Documents/Studiedocumenten/2023-2024/MSc Research Project/Results/Figure_results/Results_benchmarks/PPO_vs_MWPM_{evaluation_path}_{loaded_model_settings['error_rate']}.pdf"
+    path_plot = f"/Users/lindsayspoor/Library/Mobile Documents/com~apple~CloudDocs/Documents/Studiedocumenten/2023-2024/MSc Research Project/Results/Figure_results/Results_benchmarks/DQN_vs_MWPM_{evaluation_path}_{loaded_model_settings['error_rate']}.pdf"
 
 
 plot_benchmark_MWPM(success_rates_all, success_rates_all_MWPM, N_evaluates, error_rates_eval, board_size,path_plot,loaded_model_settings['N'], loaded_model_settings['error_rate'],evaluate_fixed)
