@@ -1,16 +1,16 @@
 from evaluation_functions_static import evaluate_error_rates, evaluate_fixed_errors
 from plot_functions import plot_benchmark_MWPM
 import numpy as np
-from PPO_static_agent import PPO_agent
+from PPO_CNN_static_agent import PPO_CNN_agent
 
 
 
 # SETTINGS FOR RUNNING THIS SCRIPT
 
-train=True # if True the agent will be trained, if False the agent will be loaded given the specified settings below. Please specify the storing folder in 'PPO_static_agent.py'
+train=True # if True the agent will be trained, if False the agent will be loaded given the specified settings below. Please specify the storing folder in 'PPO_CNN_static_agent.py'
 curriculum=False #if False, curriculum learning on multiple sequential error values is disabled. Please specify either 'training_error_rates' or 'training_N' as a list containing a single value.
 # If True, curriculum is enabled. Please specify 'training_error_rates' of 'training_N' as a list containing multiple values to train on sequentially.
-log = True # if set to True the learning curve during training is registered and saved. Please specify the storing folder in 'PPO_static_agent.py'
+log = True # if set to True the learning curve during training is registered and saved. Please specify the storing folder in 'PPO_CNN_static_agent.py'
 correlated=False # if True, the agent will be initialised on an environment providing correlated bit-flip errors. If False, the environment will introduce uncorrelated bit-flip errors.
 fixed=False # if set to True the agent is trained on training examples with a fixed amount of N initial errors. If set to False the agent is trained on training examples given an error rate 'error_rate' for each qubit to have a chance to be flipped.
 evaluate_fixed=False # if set to True the trained model is evaluated on examples with a fixed amount of N initial errors. If set to False the trained model is evaluated on examples in which each qubit is flipped with a chance of 'error_rate'.
@@ -129,7 +129,7 @@ for training_value in training_values:
 
 
     # initialise PPO Agent
-    AgentPPO = PPO_agent(initialisation_settings, log)
+    AgentPPO = PPO_CNN_agent(initialisation_settings, log)
 
     if train:
         AgentPPO.train_model(save_model_path=save_model_path)
@@ -189,9 +189,9 @@ success_rates_all_MWPM=np.array(success_rates_all_MWPM)
 
 
 if fixed:
-    path_plot = f"/Users/lindsayspoor/Library/Mobile Documents/com~apple~CloudDocs/Documents/Studiedocumenten/2023-2024/MSc Research Project/Results/Figure_results/Results_benchmarks/PPO_vs_MWPM_{evaluation_path}_{loaded_model_settings['N']}.pdf"
+    path_plot = f"/Users/lindsayspoor/Library/Mobile Documents/com~apple~CloudDocs/Documents/Studiedocumenten/2023-2024/MSc Research Project/Results/Figure_results/Results_benchmarks/PPO_CNN_vs_MWPM_{evaluation_path}_{loaded_model_settings['N']}.pdf"
 else:
-    path_plot = f"/Users/lindsayspoor/Library/Mobile Documents/com~apple~CloudDocs/Documents/Studiedocumenten/2023-2024/MSc Research Project/Results/Figure_results/Results_benchmarks/PPO_vs_MWPM_{evaluation_path}_{loaded_model_settings['error_rate']}.pdf"
+    path_plot = f"/Users/lindsayspoor/Library/Mobile Documents/com~apple~CloudDocs/Documents/Studiedocumenten/2023-2024/MSc Research Project/Results/Figure_results/Results_benchmarks/PPO_CNN_vs_MWPM_{evaluation_path}_{loaded_model_settings['error_rate']}.pdf"
 
 
 plot_benchmark_MWPM(success_rates_all, success_rates_all_MWPM, N_evaluates, error_rates_eval, board_size,path_plot,loaded_model_settings['N'], loaded_model_settings['error_rate'],evaluate_fixed)

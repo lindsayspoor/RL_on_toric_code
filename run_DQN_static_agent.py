@@ -7,10 +7,10 @@ from DQN_static_agent import DQN_agent
 
 # SETTINGS FOR RUNNING THIS SCRIPT
 
-train=True # if True the agent will be trained, if False the agent will be loaded given the specified settings below. Please specify the storing folder in 'PPO_static_agent.py'
+train=True # if True the agent will be trained, if False the agent will be loaded given the specified settings below. Please specify the storing folder in 'DQN_static_agent.py'
 curriculum=False #if False, curriculum learning on multiple sequential error values is disabled. Please specify either 'training_error_rates' or 'training_N' as a list containing a single value.
 # If True, curriculum is enabled. Please specify 'training_error_rates' of 'training_N' as a list containing multiple values to train on sequentially.
-log = True # if set to True the learning curve during training is registered and saved. Please specify the storing folder in 'PPO_static_agent.py'
+log = True # if set to True the learning curve during training is registered and saved. Please specify the storing folder in 'DQN_static_agent.py'
 correlated=False # if True, the agent will be initialised on an environment providing correlated bit-flip errors. If False, the environment will introduce uncorrelated bit-flip errors.
 fixed=False # if set to True the agent is trained on training examples with a fixed amount of N initial errors. If set to False the agent is trained on training examples given an error rate 'error_rate' for each qubit to have a chance to be flipped.
 evaluate_fixed=False # if set to True the trained model is evaluated on examples with a fixed amount of N initial errors. If set to False the trained model is evaluated on examples in which each qubit is flipped with a chance of 'error_rate'.
@@ -37,7 +37,7 @@ training_error_rates=[error_rate] # values of error rates the agent model is tra
 evaluate=True # if False, the agent won't be evaluated. If True, the agent will be evaluated.
 check_fails=False # if True, during evaluation all cases in which the agent fails, but MWPM succeeds, will be rendered.
 render=False # if True, the environment with the agent's actions will be rendered per timestep.
-save_files=True # if True results will be saved. Please specify the storing folder in the file 'evaluation_functions_PPO_static.py'
+save_files=True # if True results will be saved. Please specify the storing folder in the file 'evaluation_functions_static.py'
 number_evaluations=100 # the number of evaluations the agent will be evaluated on
 max_moves=50 # the maximum amount of moves the agent is allowed to make per evaluation episode
 N_evaluates = [1,2,3,4,5] # the number of fixed initial flips N the agent is evaluated on if 'evaluate_fixed' is set to True.
