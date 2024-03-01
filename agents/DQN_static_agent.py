@@ -1,24 +1,21 @@
-from stable_baselines3 import PPO
-from toric_game_static_env import ToricGameEnv, ToricGameEnvFixedErrs, ToricGameEnvLocalErrs
-from stable_baselines3.ppo.policies import MlpPolicy
-from sb3_contrib.common.maskable.policies import MaskableActorCriticPolicy
+from stable_baselines3 import DQN
+from environments.toric_game_static_env import ToricGameEnv, ToricGameEnvFixedErrs, ToricGameEnvLocalErrs
 import os
-from sb3_contrib import MaskablePPO
-from custom_callback import SaveOnBestTrainingRewardCallback
+from agents.custom_callback import SaveOnBestTrainingRewardCallback
 from stable_baselines3.common.monitor import Monitor
-from plot_functions import plot_log_results
+from functions.plot_functions import  plot_log_results 
 
 
 
 
-
-class PPO_agent:
+class DQN_agent:
     def __init__(self, initialisation_settings, log):
+
         '''
-        This class initialises, trains, or loads a trained PPO model using the provided settings.
+        This class initialises, trains, or loads a trained DQN model using the provided settings.
 
         Args:
-            initialisation_settings (dict): the settings the PPO model should be initialised on.
+            initialisation_settings (dict): the settings the DQN model should be initialised on.
             log (boolean): boolean specifying whether the training progress should be logged or not.
 
         self.storing_folder (str): specify the folder the model can be saved to/ accessed trough, and where the log files should be accessed from.
@@ -32,7 +29,7 @@ class PPO_agent:
         # Create log dir
         self.log=log
         if self.log:
-            self.log_dir = f"{self.storing_folder}/log_dirs/log_dir_tryout"
+            self.log_dir = f"{self.storing_folder}/log_dirs/log_dir_dqn"
             os.makedirs(self.log_dir, exist_ok=True)
 
 
@@ -56,15 +53,11 @@ class PPO_agent:
             self.env = Monitor(self.env, self.log_dir)
             self.callback = SaveOnBestTrainingRewardCallback(check_freq=10000, log_dir=self.log_dir)
             
-        #INITIALISE MODEL
-        if self.initialisation_settings['mask_actions']:
-            ppo = MaskablePPO       # MaskablePPO masks out all invalid actions
-            policy = MaskableActorCriticPolicy # MaskableActorCriticPolicy is alaias of MlpPolicy, suitable for MaskablePPO
-        else:
-            ppo= PPO
-            policy = MlpPolicy
+        # INITIALISE MODEL
+        dqn= DQN
+        policy = "MlpPolicy"
         
-        self.model = ppo(policy, self.env, ent_coef=self.initialisation_settings['ent_coef'], clip_range = self.initialisation_settings['clip_range'],learning_rate=self.initialisation_settings['lr'], verbose=0, policy_kwargs={"net_arch":dict(pi=[64,64], vf=[64,64])})
+        self.model = dqn(policy, self.env,learning_rate=self.initialisation_settings['lr'], verbose=0,exploration_fraction=self.initialisation_settings['exp_frac'], exploration_initial_eps=self.initialisation_settings['exp_init'], exploration_final_eps=self.initialisation_settings['exp_fin'], buffer_size=self.initialisation_settings['buff']) 
 
         print("initialisation done")
         print(self.model.policy)
@@ -78,7 +71,6 @@ class PPO_agent:
 
         '''
 
-
         print("changing environment settings...")
         if settings['fixed']:
             self.env = ToricGameEnvFixedErrs(settings)
@@ -87,6 +79,7 @@ class PPO_agent:
                 self.env = ToricGameEnv(settings)
             else:
                 self.env = ToricGameEnvLocalErrs(settings)
+
 
         if self.log:
             self.env = Monitor(self.env, self.log_dir, override_existing=False)
@@ -104,15 +97,11 @@ class PPO_agent:
         else:
             self.model.learn(total_timesteps=self.initialisation_settings['total_timesteps'], progress_bar=True)
     
-        self.model.save(f"{self.storing_folder}/trained_models/ppo_{save_model_path}")
+        self.model.save(f"trained_models/dqn_{save_model_path}")
         print("training done")
 
     def load_model(self, load_model_path):
         print("loading the model...")
 
-        if self.initialisation_settings['mask_actions']:
-            self.model=MaskablePPO.load(f"{self.storing_folder}/trained_models/ppo_{load_model_path}")
-        else:
-            self.model=PPO.load(f"{self.storing_folder}/trained_models/ppo_{load_model_path}")
+        self.model=DQN.load(f"trained_models/dqn_{load_model_path}")
         print("loading done")
-    

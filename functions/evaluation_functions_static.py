@@ -1,9 +1,9 @@
 import numpy as np
-from MWPM_decoder import decode_MWPM_pymatching
+from functions.MWPM_decoder import decode_MWPM_pymatching
 from tqdm import tqdm
 from sb3_contrib.common.maskable.utils import get_action_masks
-from plot_functions import render_evaluation
-from toric_game_static_env_extra_action import ToricGameEnvExtraAction, ToricGameEnvExtraActionFixed
+from functions.plot_functions import render_evaluation
+from environments.toric_game_static_env_extra_action import ToricGameEnvExtraAction, ToricGameEnvExtraActionFixed
 
 
 

@@ -1,12 +1,12 @@
 from stable_baselines3 import PPO
-from toric_game_dynamic_env import ToricGameDynamicEnv, ToricGameDynamicEnvFixedErrs
+from environments.toric_game_dynamic_env import ToricGameDynamicEnv, ToricGameDynamicEnvFixedErrs
 from stable_baselines3.ppo.policies import MlpPolicy
 from sb3_contrib.common.maskable.policies import MaskableActorCriticPolicy
 import os
 from sb3_contrib import MaskablePPO
-from custom_callback import SaveOnBestTrainingRewardCallback
+from agents.custom_callback import SaveOnBestTrainingRewardCallback
 from stable_baselines3.common.monitor import Monitor
-from plot_functions import plot_log_results
+from functions.plot_functions import plot_log_results
 
 
 

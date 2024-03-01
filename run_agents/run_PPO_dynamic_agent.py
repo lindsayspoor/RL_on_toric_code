@@ -1,6 +1,6 @@
-from evaluation_functions_dynamic import evaluate_error_rates, evaluate_fixed_errors
-from plot_functions import plot_single_box_dynamic
-from PPO_dynamic_agent import PPO_agent
+from functions.evaluation_functions_dynamic import evaluate_error_rates, evaluate_fixed_errors
+from functions.plot_functions import plot_single_box_dynamic
+from agents.PPO_dynamic_agent import PPO_agent
 
 
 # SETTINGS FOR RUNNING THIS SCRIPT

@@ -1,7 +1,7 @@
-from evaluation_functions_static import evaluate_error_rates, evaluate_fixed_errors
-from plot_functions import plot_benchmark_MWPM
+from functions.evaluation_functions_static import evaluate_error_rates, evaluate_fixed_errors
+from functions.plot_functions import plot_benchmark_MWPM
 import numpy as np
-from PPO_static_agent import PPO_agent
+from agents.PPO_static_agent import PPO_agent
 
 
 

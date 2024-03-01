@@ -1,7 +1,7 @@
 import numpy as np
 from gymnasium import spaces
 
-from toric_game_static_env import ToricGameEnv, ToricGameEnvFixedErrs, Board
+from environments.toric_game_static_env import ToricGameEnv, ToricGameEnvFixedErrs, Board
 
 
 class IgnoreExtraActionBoard(Board):
