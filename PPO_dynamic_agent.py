@@ -1,12 +1,12 @@
 from stable_baselines3 import PPO
-from environments.toric_game_static_env import ToricGameEnv, ToricGameEnvFixedErrs, ToricGameEnvLocalErrs
+from toric_game_dynamic_env import ToricGameDynamicEnv, ToricGameDynamicEnvFixedErrs
 from stable_baselines3.ppo.policies import MlpPolicy
 from sb3_contrib.common.maskable.policies import MaskableActorCriticPolicy
 import os
 from sb3_contrib import MaskablePPO
-from agents.custom_callback import SaveOnBestTrainingRewardCallback
+from custom_callback import SaveOnBestTrainingRewardCallback
 from stable_baselines3.common.monitor import Monitor
-from functions.plot_functions import plot_log_results
+from plot_functions import plot_log_results
 
 
 
@@ -30,10 +30,10 @@ class PPO_agent:
 
         self.initialisation_settings=initialisation_settings
         # Create log dir
-        self.log=log
+        self.log = log
         if self.log:
-            self.log_dir = f"{self.storing_folder}/log_dirs/log_dir_tryout"
-            os.makedirs(self.log_dir, exist_ok=True)
+            self.log_dir = f"{self.storing_folder}/log_dirs/log_dir_dynamic"
+            os.makedirs(self.log_dir, exist_ok = True)
 
 
 
@@ -41,33 +41,41 @@ class PPO_agent:
         self.initialise_model()
 
     def initialise_model(self):
+
         # INITIALISE ENVIRONMENT
         print("initialising the environment and model...")
-        if self.initialisation_settings['fixed']:
-            self.env = ToricGameEnvFixedErrs(self.initialisation_settings)
-        else:
-            if not self.initialisation_settings['correlated']:
-                self.env = ToricGameEnv(self.initialisation_settings)
-            else:
-                self.env = ToricGameEnvLocalErrs(self.initialisation_settings)
 
+        if self.initialisation_settings['fixed']:
+            self.env = ToricGameDynamicEnvFixedErrs(self.initialisation_settings)
+        else:
+            self.env = ToricGameDynamicEnv(self.initialisation_settings)
 
         if self.log:
             self.env = Monitor(self.env, self.log_dir)
             self.callback = SaveOnBestTrainingRewardCallback(check_freq=10000, log_dir=self.log_dir)
             
-        #INITIALISE MODEL
+        # INITIALISE MODEL
         if self.initialisation_settings['mask_actions']:
             ppo = MaskablePPO       # MaskablePPO masks out all invalid actions
             policy = MaskableActorCriticPolicy # MaskableActorCriticPolicy is alaias of MlpPolicy, suitable for MaskablePPO
         else:
-            ppo= PPO
-            policy = MlpPolicy
-        
-        self.model = ppo(policy, self.env, ent_coef=self.initialisation_settings['ent_coef'], clip_range = self.initialisation_settings['clip_range'],learning_rate=self.initialisation_settings['lr'], verbose=0, policy_kwargs={"net_arch":dict(pi=[64,64], vf=[64,64])})
+            ppo = PPO
+            policy = MlpPolicy 
+        lr = self.initialisation_settings['lr']
+        if lr == "annealing":
+            lr = self.learning_rate_annealing
+        self.model = ppo(policy, self.env, ent_coef=self.initialisation_settings['ent_coef'], clip_range = self.initialisation_settings['clip_range'],learning_rate=lr, verbose=0, n_steps=self.initialisation_settings['n_steps'], policy_kwargs={"net_arch":dict(pi=[64,64], vf=[64,64])})
 
         print("initialisation done")
         print(self.model.policy)
+
+
+    def learning_rate_annealing(self,value):
+
+        begin = 0.001
+        end = 0.0001
+        return begin * value + end
+
 
     def change_environment_settings(self, settings):
         '''
@@ -77,42 +85,46 @@ class PPO_agent:
             settings (dict): the settings the environment should be changed to.
 
         '''
-
-
+                
         print("changing environment settings...")
+        
         if settings['fixed']:
-            self.env = ToricGameEnvFixedErrs(settings)
+            self.env = ToricGameDynamicEnvFixedErrs(settings)
         else:
-            if not self.initialisation_settings['correlated']:
-                self.env = ToricGameEnv(settings)
-            else:
-                self.env = ToricGameEnvLocalErrs(settings)
+            self.env = ToricGameDynamicEnv(settings)
 
         if self.log:
-            self.env = Monitor(self.env, self.log_dir, override_existing=False)
-            self.callback = SaveOnBestTrainingRewardCallback(check_freq=10000, log_dir=self.log_dir)
+            self.env = Monitor(self.env, self.log_dir, override_existing = False)
+            self.callback = SaveOnBestTrainingRewardCallback(check_freq = 10000, log_dir=self.log_dir)
         
         self.model.set_env(self.env)
 
         print("changing settings done")
 
+
     def train_model(self, save_model_path):
+
         print("training the model...")
+
         if self.log:
-            self.model.learn(total_timesteps=self.initialisation_settings['total_timesteps'], progress_bar=True, callback=self.callback)
-            plot_log_results(self.log_dir, save_model_path)
+            self.model.learn(total_timesteps = self.initialisation_settings['total_timesteps'], progress_bar = True, callback = self.callback)
+            plot_log_results(self.log_dir ,save_model_path)
         else:
-            self.model.learn(total_timesteps=self.initialisation_settings['total_timesteps'], progress_bar=True)
+            self.model.learn(total_timesteps = self.initialisation_settings['total_timesteps'], progress_bar = True)
     
-        self.model.save(f"{self.storing_folder}/trained_models/ppo_{save_model_path}")
+        self.model.save(f"{self.storing_folder}/trained_models/dynamic_ppo_{save_model_path}")
+
         print("training done")
 
+
     def load_model(self, load_model_path):
+
         print("loading the model...")
 
         if self.initialisation_settings['mask_actions']:
-            self.model=MaskablePPO.load(f"{self.storing_folder}/trained_models/ppo_{load_model_path}")
+            self.model = MaskablePPO.load(f"{self.storing_folder}/trained_models/dynamic_ppo_{load_model_path}")
         else:
-            self.model=PPO.load(f"{self.storing_folder}/trained_models/ppo_{load_model_path}")
+            self.model = PPO.load(f"{self.storing_folder}/trained_models/dynamic_ppo_{load_model_path}")
+
         print("loading done")
     

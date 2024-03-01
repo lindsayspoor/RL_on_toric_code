@@ -1,7 +1,7 @@
 import numpy as np
-from functions.plot_functions import plot_benchmark_MWPM
-from agents.PPO_dynamic_agent import PPO_agent
-from functions.evaluation_functions_static import evaluate_error_rates_dynamic_on_static
+from plot_functions import plot_benchmark_MWPM
+from PPO_dynamic_agent import PPO_agent
+from evaluation_functions_static import evaluate_error_rates_dynamic_on_static
 
 
 

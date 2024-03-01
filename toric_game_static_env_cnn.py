@@ -40,11 +40,13 @@ class ToricGameEnvCNN(gym.Env):
         self.initial_qubits_flips = [[],[]]
 
 
+
+
         # Empty State
         self.state = Board(self.board_size)
         self.done = None
         self.logical_error = None
-
+        self.parity_check_matrix_plaqs = self.construct_parity_check_plaqs()
 
         self.observation_space = spaces.Box(low=0, high=1, shape=(1,self.board_size,self.board_size), dtype=np.uint8) # dxd plaquettes on which we can view syndromes
         self.action_space = spaces.discrete.Discrete(len(self.state.qubit_pos)) # 2dxd qubits on which a bit-flip error can be introduced
@@ -55,6 +57,19 @@ class ToricGameEnvCNN(gym.Env):
         # Derive a random seed.
         seed2 = seeding.hash_seed(seed1 + 1) % 2**32
         return [seed1, seed2]
+    
+
+    def construct_parity_check_plaqs(self):
+
+        #construct partiy check matrix for plaquette positions w.r.t qubit positions (needed for MWPM decoding)
+        parity_check_matrix_plaqs = np.zeros((len(self.state.plaquet_pos), len(self.state.qubit_pos)))
+        
+        for plaq_ind, plaq_pos in enumerate(self.state.plaquet_pos):
+            neighbours = self.find_neighboring_qubits(plaq_pos)
+            for neighbour in neighbours:
+                parity_check_matrix_plaqs[plaq_ind][neighbour] = 1 
+
+        return parity_check_matrix_plaqs
 
     def find_neighboring_qubits(self, plaq):
         '''Find qubits adjacent to given plaquette.'''
@@ -105,7 +120,7 @@ class ToricGameEnvCNN(gym.Env):
 
         return self.state.encode(self.channels, self.memory)
 
-    def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None) -> tuple[Any, dict[str, Any]]:
+    def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None, allow_empty=False) -> tuple[Any, dict[str, Any]]:
          super().reset(seed=seed, options=options)
 
          initial_observation = self.generate_errors()

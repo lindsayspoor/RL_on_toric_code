@@ -1,9 +1,9 @@
 from stable_baselines3 import DQN
-from environments.toric_game_static_env import ToricGameEnv, ToricGameEnvFixedErrs, ToricGameEnvLocalErrs
+from toric_game_static_env import ToricGameEnv, ToricGameEnvFixedErrs, ToricGameEnvLocalErrs
 import os
-from agents.custom_callback import SaveOnBestTrainingRewardCallback
+from custom_callback import SaveOnBestTrainingRewardCallback
 from stable_baselines3.common.monitor import Monitor
-from functions.plot_functions import  plot_log_results 
+from plot_functions import  plot_log_results 
 
 
 
