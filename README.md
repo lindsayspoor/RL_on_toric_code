@@ -68,3 +68,5 @@ The repository contains different files to train and evaluate RL agents on the t
 	- Specify all settings in this file in order to either train or load and evaluate a DQN model on the static environment, and make sure the correct storing location is specified in DQN_static_agent.py.
 - run_PPO_dynamic_agent.py
 	- Specify all settings in this file in order to either train or load and evaluate a PPO model on the dynamic environment, and make sure the correct storing location is specified in PPO_dynamic_agent.py.
+- evaluate_dynamic_on_static.py
+	- Specify all settings in this file in order to either train or load a PPO model on the dynamic environment, and evaluate on the static environment, and make sure the correct storing location is PPO_dynamic_agent.py
