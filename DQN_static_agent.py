@@ -1,25 +1,9 @@
-import numpy as np
-import matplotlib.pyplot as plt
 from stable_baselines3 import DQN
-from toric_game_env import ToricGameEnv, ToricGameEnvFixedErrs, ToricGameEnvLocalErrs
-from stable_baselines3.ppo.policies import MlpPolicy
-from sb3_contrib.common.maskable.policies import MaskableActorCriticPolicy
+from toric_game_static_env import ToricGameEnv, ToricGameEnvFixedErrs, ToricGameEnvLocalErrs
 import os
-from stable_baselines3.common.callbacks import BaseCallback
-from sb3_contrib import MaskablePPO
-from callback_class import SaveOnBestTrainingRewardCallback
-from sb3_contrib.common.maskable.utils import get_action_masks
+from custom_callback import SaveOnBestTrainingRewardCallback
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.results_plotter import load_results, ts2xy
-from stable_baselines3.common.policies import obs_as_tensor
-import networkx as nx
-from tqdm import tqdm
-from plot_functions import plot_benchmark_MWPM, plot_log_results, render_evaluation
-from MWPM_decoder import decode_MWPM_method, decode_MWPM_pymatching
-
-os.getcwd()
-
-
+from plot_functions import  plot_log_results 
 
 
 

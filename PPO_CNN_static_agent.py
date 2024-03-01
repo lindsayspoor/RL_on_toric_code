@@ -1,5 +1,5 @@
 from stable_baselines3 import PPO
-from toric_game_env_cnn import ToricGameEnvCNN, ToricGameEnvFixedErrsCNN
+from toric_game_static_env_cnn import ToricGameEnvCNN, ToricGameEnvFixedErrsCNN
 from stable_baselines3.ppo.policies import CnnPolicy
 from sb3_contrib.common.maskable.policies import MaskableActorCriticCnnPolicy
 import os

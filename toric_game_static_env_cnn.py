@@ -1,7 +1,6 @@
 from __future__ import division
 from typing import Any
 import numpy as np
-
 import gymnasium as gym
 from gymnasium.utils import seeding
 from gymnasium import spaces
@@ -9,9 +8,8 @@ import matplotlib.pyplot as plt
 
 
 
-
 ### Environment
-class ToricGameEnv(gym.Env):
+class ToricGameEnvCNN(gym.Env):
     '''
     ToricGameEnv environment. Effective single player game.
     '''
@@ -36,9 +34,6 @@ class ToricGameEnv(gym.Env):
         self.illegal_action_reward = settings['i_reward']
         self.N = settings['N']
         self.pauli_opt=0
-        self.max_steps=settings['max_moves']
-        self.counter=0
-        self.lambda_value=1
 
         # Keep track of the moves
         self.qubits_flips = [[],[]]
@@ -51,11 +46,8 @@ class ToricGameEnv(gym.Env):
         self.logical_error = None
 
 
-        self.parity_check_matrix_plaqs = self.construct_parity_check_plaqs()
-        self.dist_matrix = self.construct_distance_matrix()
-
-        self.observation_space = spaces.MultiBinary(self.board_size*self.board_size) #3x3 plaquettes on which we can view syndromes
-        self.action_space = spaces.discrete.Discrete(len(self.state.qubit_pos)) #0-17 qubits on which a bit-flip error can be introduced
+        self.observation_space = spaces.Box(low=0, high=1, shape=(1,self.board_size,self.board_size), dtype=np.uint8) # dxd plaquettes on which we can view syndromes
+        self.action_space = spaces.discrete.Discrete(len(self.state.qubit_pos)) # 2dxd qubits on which a bit-flip error can be introduced
 
 
     def seed(self, seed=None):
@@ -63,49 +55,6 @@ class ToricGameEnv(gym.Env):
         # Derive a random seed.
         seed2 = seeding.hash_seed(seed1 + 1) % 2**32
         return [seed1, seed2]
-    
-
-    def construct_distance_matrix(self):
-
-        pair_distances = np.empty((len(self.state.qubit_pos), len(self.state.qubit_pos)))
-        for i, p1 in enumerate(self.state.qubit_pos):
-            for j, p2 in enumerate(self.state.qubit_pos):
-                dist_nd_sq = 0
-                for d in range(2):
-                    dist_1d = abs(p2[d] - p1[d])
-                    if dist_1d > ((self.board_size*2) / 2):  # check if d_ij > box_size / 2
-                        dist_1d = (self.board_size*2) - dist_1d
-                    dist_nd_sq += dist_1d ** 2
-                pair_distances[i, j] = dist_nd_sq
-        pair_distances = np.sqrt(pair_distances)
-
-        return pair_distances
-    
-
-    def construct_weighted_matrix(self,dist_matrix, q):
-
-        selected_dist_matrix = dist_matrix[q]/(2*self.board_size)
-        weighted_matrix = (1-selected_dist_matrix)
-        where_zero = np.argwhere(weighted_matrix == np.max(weighted_matrix))[0]
-        weighted_matrix[where_zero] = 0
-
-        return weighted_matrix
-
-
-
-
-    def construct_parity_check_plaqs(self):
-
-        #construct partiy check matrix for plaquette positions w.r.t qubit positions (needed for MWPM decoding)
-        parity_check_matrix_plaqs = np.zeros((len(self.state.plaquet_pos), len(self.state.qubit_pos)))
-        
-        for plaq_ind, plaq_pos in enumerate(self.state.plaquet_pos):
-            neighbours = self.find_neighboring_qubits(plaq_pos)
-            for neighbour in neighbours:
-                parity_check_matrix_plaqs[plaq_ind][neighbour] = 1 
-
-        return parity_check_matrix_plaqs      
-
 
     def find_neighboring_qubits(self, plaq):
         '''Find qubits adjacent to given plaquette.'''
@@ -136,7 +85,8 @@ class ToricGameEnv(gym.Env):
 
 
 
-    def generate_errors(self, allow_empty=False):
+
+    def generate_errors(self):
 
         self.state.reset()
 
@@ -149,18 +99,16 @@ class ToricGameEnv(gym.Env):
         self.logical_error=self.check_logical_error()
         self.done=self.state.has_no_syndromes()
 
-
-        #for evaluation
-        if not allow_empty and (self.done or self.logical_error):
+        if self.done == True:
             self.generate_errors()
+
 
         return self.state.encode(self.channels, self.memory)
 
-    def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None, allow_empty=False) -> tuple[Any, dict[str, Any]]:
+    def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None) -> tuple[Any, dict[str, Any]]:
          super().reset(seed=seed, options=options)
-        
-         self.counter=0
-         initial_observation = self.generate_errors(allow_empty)
+
+         initial_observation = self.generate_errors()
 
          return initial_observation, {'state': self.state, 'message':"reset"}
 
@@ -225,12 +173,6 @@ class ToricGameEnv(gym.Env):
             done: boolean,
             info: state dict
         '''
-        self.logical_error=self.check_logical_error()
-        self.done=self.state.has_no_syndromes()
-
-        if self.counter==self.max_steps:
-            return self.state.encode(self.channels, self.memory), self.continue_reward, self.done, True,{'state': self.state, 'message':"max steps reached"}
-
 
         if self.done:
             if self.logical_error:
@@ -238,26 +180,17 @@ class ToricGameEnv(gym.Env):
             else:
                 return self.state.encode(self.channels, self.memory), self.success_reward, self.done, False,{'state': self.state, 'message':"success"}
 
+
    
         self.qubits_flips[0].append(location)
    
         self.state.act(self.state.qubit_pos[location], self.pauli_opt)
 
-        self.counter+=1
-                
+
         if self.state.has_no_syndromes()==False:
             self.done = False
-            if self.mask_actions==False:
+            return self.state.encode(self.channels, self.memory), self.continue_reward, self.done, False,{'state': self.state, 'message':"continue"}
 
-                self.action_masks_list = self.action_masks()
-                if self.action_masks_list[location] == False:
-                    return self.state.encode(self.channels, self.memory), self.illegal_action_reward, self.done, False,{'state': self.state, 'message':"illegal action, continue"}
-                else:
-                    return self.state.encode(self.channels, self.memory), self.continue_reward, self.done, False,{'state': self.state, 'message':"continue"}
-            
-            else:
-                return self.state.encode(self.channels, self.memory), self.continue_reward, self.done, False,{'state': self.state, 'message':"continue"}
-        
         else:
             self.done=True
             self.logical_error = self.check_logical_error()
@@ -326,13 +259,13 @@ class ToricGameEnv(gym.Env):
 
         for i in neighboring_qubits:
             if i ==l_list[0]:
-                closed = True #closed loop
-                return l_list, closed, checked_plaqs #closed loop
+                closed = True # closed loop
+                return l_list, closed, checked_plaqs # closed loop
                 
             
-            if self.state.hidden_state_qubit_values[0][i]==1: #is this neighboring qubit a flipped one?
+            if self.state.hidden_state_qubit_values[0][i]==1: # is this neighboring qubit a flipped one?
 
-                l_list, closed, checked_plaqs = self.find_string(i, l_list, checked_plaqs) #check again for next flipped qubit if it ends at a syndrome point or not.
+                l_list, closed, checked_plaqs = self.find_string(i, l_list, checked_plaqs) # check again for next flipped qubit if it ends at a syndrome point or not.
 
 
 
@@ -392,7 +325,7 @@ class ToricGameEnv(gym.Env):
             
 
 
-class ToricGameEnvFixedErrs(ToricGameEnv):
+class ToricGameEnvFixedErrsCNN(ToricGameEnvCNN):
     def __init__(self, settings):
         super().__init__(settings)
         
@@ -402,7 +335,6 @@ class ToricGameEnvFixedErrs(ToricGameEnv):
             but report only the syndrome
         '''
 
-
         for q in np.random.choice(len(self.state.qubit_pos), self.N, replace=False):
             q = self.state.qubit_pos[q]
             self.initial_qubits_flips[0].append(q)
@@ -411,40 +343,6 @@ class ToricGameEnvFixedErrs(ToricGameEnv):
         # Now unflip the qubits, they're a secret
         self.state.qubit_values = np.zeros((2, 2*self.board_size*self.board_size))
 
-
-
-
-class ToricGameEnvLocalErrs(ToricGameEnv):
-    def __init__(self, settings):
-        super().__init__(settings)
-        
-
-    def _set_initial_errors(self):
-        ''' Set random initial errors with an %error_rate rate and flip next qubits with a correlation to the former flipped ones
-            but report only the syndrome
-        '''
-
-
-
-        probabilities = np.ones((len(self.state.qubit_pos)))
-
-
-        number_flips = np.random.binomial(len(self.state.qubit_pos),self.error_rate) # choose the amount of qubits to flip according to error rate
-
-        for i in range(number_flips):
-            probabilities=probabilities/np.sum(probabilities)
-            q = np.random.choice(len(self.state.qubit_pos), p=probabilities) # choose which qubit to flip according to 'probabilities', uniformly distributed at first flip
-
-            self.initial_qubits_flips[0].append( self.state.qubit_pos[q] )
-            self.state.act(self.state.qubit_pos[q], self.pauli_opt)
-
-            weighted_matrix = self.construct_weighted_matrix(self.dist_matrix, q)
-
-            probabilities = probabilities*weighted_matrix # update 'probabilities' such that the qubits close to the former qubit flips have a higher chance to flip as well
-
-
-        # Now unflip the qubits, they're a secret
-        self.state.qubit_values = np.zeros((2, 2*self.board_size*self.board_size))
 
 
 
@@ -475,7 +373,6 @@ class Board(object):
         qubit_pos   = [[x,y] for x in range(2*size) for y in range((x+1)%2, 2*size, 2)]
         plaquet_pos = [[x,y] for x in range(1,2*size,2) for y in range(1,2*size,2)]
         star_pos    = [[x,y] for x in range(0,2*size,2) for y in range(0,2*size,2)]
-
 
         return qubit_pos, plaquet_pos, star_pos
 
@@ -514,7 +411,7 @@ class Board(object):
     def reset(self):
         
         self.qubit_values = np.zeros((2, 2*self.size*self.size))
-        self.hidden_state_qubit_values = np.zeros((2, 2*self.size*self.size))  # make hidden state that contains the information about the initially flipped qubits (not visible to the agent)
+        self.hidden_state_qubit_values = np.zeros((2, 2*self.size*self.size))  #make hidden state that contains the information about the initially flipped qubits (not visible to the agent)
         self.op_values = np.zeros((2, self.size*self.size))
 
         self.syndrome_pos = [] # Location of syndromes
@@ -613,15 +510,14 @@ class Board(object):
 
         img=np.array([])
         for channel in channels:
-            img = np.concatenate((img, self.op_values[channel]))
+            img = np.concatenate((img, self.op_values[channel])).reshape((1,self.size, self.size)).astype(np.uint8)
             if memory:
-                img = np.concatenate((img, self.qubit_values[channel]))
+                img = np.concatenate((img, self.qubit_values[channel])).reshape((1,self.size, self.size)).astype(np.uint8)
 
         return img
 
     def image_view(self, number=False, channel=0):
         image = np.empty((2*self.size, 2*self.size), dtype=object)
-        # print(image)
         for i, plaq in enumerate(self.plaquet_pos):
             if self.op_values[0][i] == 1:
                 image[plaq[0], plaq[1]] = "P"+str(i) if number else "P"
